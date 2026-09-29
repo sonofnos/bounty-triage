@@ -1,0 +1,22 @@
+[project]
+name = "bounty-triage"
+version = "0.1.0"
+description = "ML-assisted security report triage: vulnerability class, severity suggestion and duplicate detection, trained and measured on the RustSec advisory database."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Christian Emeka", email = "christian@sonofnos.com" }]
+dependencies = ["numpy>=1.26", "scipy>=1.11", "scikit-learn>=1.4"]
+
+[project.optional-dependencies]
+embeddings = ["sentence-transformers>=3.0"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.setuptools]
+packages = ["bounty_triage"]
+
+[tool.ruff]
+line-length = 110
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
