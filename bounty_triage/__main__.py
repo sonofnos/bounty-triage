@@ -27,18 +27,21 @@ from .models import (
     text_of,
 )
 
-# Fallbacks when reports/metrics.json is missing.
-DEFAULT_JUDGE_THRESHOLD = 0.5
-DEFAULT_SCORE_THRESHOLD = 0.35
+# Fallbacks when reports/metrics.json is missing: (likely duplicate, possible duplicate).
+DEFAULT_JUDGE_THRESHOLDS = (0.9, 0.5)
+DEFAULT_SCORE_THRESHOLDS = (0.6, 0.35)
 
 
-def _judge_threshold(reports_dir: Path) -> float:
+def _judge_thresholds(reports_dir: Path) -> tuple[float, float]:
+    """"Likely duplicate" at the 90%-precision operating point measured in evaluation,
+    "possible duplicate" at the best-F1 point."""
     try:
-        metrics = json.loads((reports_dir / "metrics.json").read_text())
-        value = metrics["dedup"]["duplicate_judge"]["probability_threshold_at_95pct_precision"]
-        return float(value) if value is not None else DEFAULT_JUDGE_THRESHOLD
+        judge = json.loads((reports_dir / "metrics.json").read_text())["dedup"]["duplicate_judge"]["judge"]
+        likely = judge["at_90pct_precision"]["threshold"]
+        possible = judge["best_f1"]["threshold"]
+        return (float(likely) if likely is not None else DEFAULT_JUDGE_THRESHOLDS[0], float(possible))
     except (OSError, KeyError, ValueError, TypeError):
-        return DEFAULT_JUDGE_THRESHOLD
+        return DEFAULT_JUDGE_THRESHOLDS
 
 
 @dataclass
@@ -72,10 +75,11 @@ def fit_models(advisories: list[dict], cve_reports: list[dict] | None = None) ->
     return Models(categories, severity, dedup, judge, advisories)
 
 
-def triage(report: str, advisories: list[dict], threshold: float | None = None, k: int = 5,
+def triage(report: str, advisories: list[dict], thresholds: tuple[float, float] | None = None, k: int = 5,
            models: Models | None = None) -> str:
-    """Triage note for one report. `threshold` is the duplicate probability (with a judge) or
-    the raw similarity (without one) above which the best match is called a duplicate."""
+    """Triage note for one report. `thresholds` are (likely, possible) cut-offs on the duplicate
+    probability when a judge is fitted, or on raw similarity when not. The tool never closes a
+    report on its own: the best it says is "likely duplicate, confirm"."""
     models = models or fit_models(advisories)
     categories, severity, dedup = models.categories, models.severity, models.dedup
     by_id = {a["id"]: a for a in advisories}
@@ -88,24 +92,26 @@ def triage(report: str, advisories: list[dict], threshold: float | None = None, 
     matches = dedup.query(report, k)
     sims = dedup.similarity([report])[0]
     if models.judge is not None:
-        threshold = DEFAULT_JUDGE_THRESHOLD if threshold is None else threshold
+        likely, possible = thresholds or DEFAULT_JUDGE_THRESHOLDS
         confidence = models.judge.probability(sims, report, [a["package"] for a in advisories])
         basis = f"duplicate probability {confidence:.2f}"
     else:
-        threshold = DEFAULT_SCORE_THRESHOLD if threshold is None else threshold
+        likely, possible = thresholds or DEFAULT_SCORE_THRESHOLDS
         confidence = matches[0].score
         basis = f"similarity {confidence:.2f}"
 
     title = next((line.strip("# ").strip() for line in report.splitlines() if line.strip()), "report")
     lines = [f"# Triage: {title[:100]}", ""]
     best = matches[0]
-    if confidence >= threshold:
-        adv = by_id[best.id]
-        lines += [f"**Likely duplicate of {best.id}** ({adv['package']}; {basis} >= {threshold:.2f}). "
+    adv = by_id[best.id]
+    if confidence >= likely:
+        lines += [f"**Likely duplicate of {best.id}** ({adv['package']}; {basis}). "
                   "Confirm and close as known, or explain what is new.", ""]
+    elif confidence >= possible:
+        lines += [f"**Possible duplicate of {best.id}** ({adv['package']}; {basis}). Compare the two "
+                  "before treating this as new: it may be a different bug in the same component.", ""]
     else:
-        lines += [f"**No close match** among {len(advisories)} known advisories "
-                  f"({basis} < {threshold:.2f}). Treat as new.", ""]
+        lines += [f"**No close match** among {len(advisories)} known advisories ({basis}). Treat as new.", ""]
 
     lines += ["## Suggested class", ""]
     lines += [f"- {c}: {p:.2f}{'  <-' if c in labels else ''}" for c, p in ranked[:4]]
@@ -136,7 +142,7 @@ def main() -> None:
 
     text = sys.stdin.read() if args.report == "-" else Path(args.report).read_text(encoding="utf-8")
     models = _load_or_fit(args.data)
-    print(triage(text, models.advisories, _judge_threshold(args.reports), args.k, models), end="")
+    print(triage(text, models.advisories, _judge_thresholds(args.reports), args.k, models), end="")
 
 
 def _load_or_fit(data: Path) -> Models:

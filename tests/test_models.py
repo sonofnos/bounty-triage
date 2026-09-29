@@ -67,10 +67,10 @@ def test_dedup_finds_the_same_bug_described_differently():
 
 def test_triage_note_flags_duplicates_and_new_reports():
     note = triage("Buffer overflow in SmallVec::insert_many: insert_many writes past the end of the heap buffer",
-                  CORPUS, threshold=0.3)
+                  CORPUS, thresholds=(0.3, 0.2))
     assert "Likely duplicate of RUSTSEC-2022-0001" in note
     assert "memory-corruption" in note
-    note = triage("Governance proposal enactment ignores the configured delay", CORPUS, threshold=0.3)
+    note = triage("Governance proposal enactment ignores the configured delay", CORPUS, thresholds=(0.3, 0.2))
     assert "No close match" in note
 
 

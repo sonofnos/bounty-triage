@@ -162,6 +162,26 @@ def _precision_threshold(y: np.ndarray, s: np.ndarray, target: float = 0.95) -> 
     return float(s[order][best]), float(tp[best] / y.sum())
 
 
+def _operating_points(y: np.ndarray, s: np.ndarray) -> dict:
+    """ROC-AUC, duplicates caught at 95/90/80% precision, and the best-F1 threshold."""
+    out: dict = {"roc_auc": round(float(roc_auc_score(y, s)), 3)}
+    for target in (0.95, 0.9, 0.8):
+        threshold, recall = _precision_threshold(y, s, target)
+        out[f"at_{int(target * 100)}pct_precision"] = {
+            "threshold": None if threshold is None else round(threshold, 3),
+            "duplicate_recall": None if recall is None else round(recall, 3),
+        }
+    order = np.argsort(-s)
+    tp = np.cumsum(y[order])
+    k = np.arange(1, len(s) + 1)
+    f1 = 2 * tp / (k + y.sum())
+    best = int(np.argmax(f1))
+    out["best_f1"] = {"f1": round(float(f1[best]), 3), "threshold": round(float(s[order][best]), 3),
+                      "precision": round(float(tp[best] / k[best]), 3),
+                      "duplicate_recall": round(float(tp[best] / y.sum()), 3)}
+    return out
+
+
 def eval_judge(sims: np.ndarray, reports: list[dict], truth: list[int], advisories: list[dict]) -> dict:
     """Out-of-fold duplicate/new calls, folds grouped by query so a query's positive and
     negative example never sit on both sides of a split."""
@@ -169,18 +189,14 @@ def eval_judge(sims: np.ndarray, reports: list[dict], truth: list[int], advisori
     X, y, groups = DuplicateJudge.training_pairs(sims, [r["text"] for r in reports], truth, packages)
     oof = cross_val_predict(LogisticRegression(max_iter=1000), X, y, groups=groups,
                             cv=GroupKFold(n_splits=5), method="predict_proba")[:, 1]
-    threshold, recall = _precision_threshold(y, oof)
-    top_only_threshold, top_only_recall = _precision_threshold(y, X[:, 0])
+    # How often the best match after removing the true advisory is another advisory for the
+    # same crate: the hard negatives that cap precision.
+    same_crate = float(np.mean([X[i, 2] for i in range(1, len(X), 2)]))
     return {
         "features": ["top similarity", "margin over runner-up", "report names the crate", "top x named"],
-        "roc_auc": round(float(roc_auc_score(y, oof)), 3),
-        "probability_threshold_at_95pct_precision": None if threshold is None else round(threshold, 3),
-        "duplicate_recall_at_95pct_precision": None if recall is None else round(recall, 3),
-        "top_score_only": {
-            "roc_auc": round(float(roc_auc_score(y, X[:, 0])), 3),
-            "duplicate_recall_at_95pct_precision": None if top_only_recall is None else round(top_only_recall, 3),
-            "threshold": None if top_only_threshold is None else round(top_only_threshold, 3),
-        },
+        "new_bug_top_match_is_same_crate": round(same_crate, 3),
+        "judge": _operating_points(y, oof),
+        "top_score_only": _operating_points(y, X[:, 0]),
     }
 
 
@@ -294,19 +310,28 @@ def to_markdown(m: dict) -> str:
                 f"{i['recall@1']} | {n['roc_auc']} | {n['duplicate_recall_at_that_threshold']} |"
             )
     j = d["duplicate_judge"]
+
+    def row(name: str, r: dict) -> str:
+        return (f"| {name} | {r['roc_auc']} | {r['at_95pct_precision']['duplicate_recall']} | "
+                f"{r['at_90pct_precision']['duplicate_recall']} | {r['at_80pct_precision']['duplicate_recall']} | "
+                f"{r['best_f1']['f1']} (P {r['best_f1']['precision']}, R {r['best_f1']['duplicate_recall']}) |")
+
     lines += [
         "",
         "### Duplicate or new?",
         "",
         "Every query is scored twice: once with its advisory in the index (a duplicate) and once with it "
-        "removed (a new bug). Five-fold cross-validation, grouped by query.",
+        "removed (a new bug). Five-fold cross-validation, grouped by query. Cells are the share of duplicates "
+        "caught while holding precision at the given level.",
         "",
-        "| decision rule | ROC-AUC | duplicates caught at 95% precision |",
-        "|---|---|---|",
-        f"| top similarity alone | {j['top_score_only']['roc_auc']} | "
-        f"{j['top_score_only']['duplicate_recall_at_95pct_precision']} |",
-        f"| logistic regression on top score, margin, crate named | {j['roc_auc']} | "
-        f"{j['duplicate_recall_at_95pct_precision']} |",
+        "| decision rule | ROC-AUC | at 95% precision | at 90% | at 80% | best F1 |",
+        "|---|---|---|---|---|---|",
+        row("top similarity alone", j["top_score_only"]),
+        row("logistic regression: top score, margin, crate named", j["judge"]),
+        "",
+        f"When the bug is new, the best remaining match is another advisory for the same crate "
+        f"{j['new_bug_top_match_is_same_crate']:.0%} of the time. Those look like duplicates on every feature "
+        "here, which is what limits precision at the top.",
     ]
     return "\n".join(lines) + "\n"
 
