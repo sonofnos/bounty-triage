@@ -1,0 +1,538 @@
+{
+  "source": {
+    "advisory_db_commit": "f23b768236fe2880e4cfa167da662cad8ca79240",
+    "advisories": 1232,
+    "cve_aliases": 572,
+    "cve_reports_with_text": 384,
+    "fetched_at": "2026-09-29T20:30:30Z"
+  },
+  "split_date": "2024-01-01",
+  "categories": {
+    "train": 376,
+    "test": 326,
+    "label_counts_test": {
+      "memory-corruption": 108,
+      "code-execution": 20,
+      "denial-of-service": 67,
+      "format-injection": 13,
+      "file-disclosure": 9,
+      "malicious": 46,
+      "memory-exposure": 33,
+      "crypto-failure": 45,
+      "privilege-escalation": 12,
+      "thread-safety": 4
+    },
+    "keyword_baseline": {
+      "micro_f1": 0.603,
+      "macro_f1": 0.534,
+      "exact_match": 0.31,
+      "any_correct": 0.61,
+      "per_label": {
+        "code-execution": {
+          "precision": 0.556,
+          "recall": 0.5,
+          "f1": 0.526,
+          "support": 20
+        },
+        "crypto-failure": {
+          "precision": 0.729,
+          "recall": 0.778,
+          "f1": 0.753,
+          "support": 45
+        },
+        "denial-of-service": {
+          "precision": 0.674,
+          "recall": 0.925,
+          "f1": 0.78,
+          "support": 67
+        },
+        "file-disclosure": {
+          "precision": 0.556,
+          "recall": 0.556,
+          "f1": 0.556,
+          "support": 9
+        },
+        "format-injection": {
+          "precision": 0.342,
+          "recall": 1.0,
+          "f1": 0.51,
+          "support": 13
+        },
+        "memory-corruption": {
+          "precision": 0.898,
+          "recall": 0.491,
+          "f1": 0.635,
+          "support": 108
+        },
+        "memory-exposure": {
+          "precision": 0.452,
+          "recall": 0.576,
+          "f1": 0.507,
+          "support": 33
+        },
+        "privilege-escalation": {
+          "precision": 0.243,
+          "recall": 0.75,
+          "f1": 0.367,
+          "support": 12
+        },
+        "thread-safety": {
+          "precision": 0.095,
+          "recall": 1.0,
+          "f1": 0.174,
+          "support": 4
+        }
+      }
+    },
+    "logreg_threshold_0.5": {
+      "micro_f1": 0.678,
+      "macro_f1": 0.515,
+      "exact_match": 0.571,
+      "any_correct": 0.663,
+      "per_label": {
+        "code-execution": {
+          "precision": 0.308,
+          "recall": 0.6,
+          "f1": 0.407,
+          "support": 20
+        },
+        "crypto-failure": {
+          "precision": 0.585,
+          "recall": 0.844,
+          "f1": 0.691,
+          "support": 45
+        },
+        "denial-of-service": {
+          "precision": 0.716,
+          "recall": 0.791,
+          "f1": 0.752,
+          "support": 67
+        },
+        "file-disclosure": {
+          "precision": 0.6,
+          "recall": 0.333,
+          "f1": 0.429,
+          "support": 9
+        },
+        "format-injection": {
+          "precision": 1.0,
+          "recall": 0.231,
+          "f1": 0.375,
+          "support": 13
+        },
+        "memory-corruption": {
+          "precision": 0.758,
+          "recall": 0.898,
+          "f1": 0.822,
+          "support": 108
+        },
+        "memory-exposure": {
+          "precision": 0.529,
+          "recall": 0.273,
+          "f1": 0.36,
+          "support": 33
+        },
+        "privilege-escalation": {
+          "precision": 1.0,
+          "recall": 0.25,
+          "f1": 0.4,
+          "support": 12
+        },
+        "thread-safety": {
+          "precision": 1.0,
+          "recall": 0.25,
+          "f1": 0.4,
+          "support": 4
+        }
+      },
+      "thresholds": {
+        "code-execution": 0.5,
+        "crypto-failure": 0.5,
+        "denial-of-service": 0.5,
+        "file-disclosure": 0.5,
+        "format-injection": 0.5,
+        "memory-corruption": 0.5,
+        "memory-exposure": 0.5,
+        "privilege-escalation": 0.5,
+        "thread-safety": 0.5
+      }
+    },
+    "logreg_tuned_thresholds": {
+      "micro_f1": 0.677,
+      "macro_f1": 0.531,
+      "exact_match": 0.515,
+      "any_correct": 0.702,
+      "per_label": {
+        "code-execution": {
+          "precision": 0.295,
+          "recall": 0.65,
+          "f1": 0.406,
+          "support": 20
+        },
+        "crypto-failure": {
+          "precision": 0.53,
+          "recall": 0.978,
+          "f1": 0.688,
+          "support": 45
+        },
+        "denial-of-service": {
+          "precision": 0.81,
+          "recall": 0.761,
+          "f1": 0.785,
+          "support": 67
+        },
+        "file-disclosure": {
+          "precision": 0.333,
+          "recall": 0.333,
+          "f1": 0.333,
+          "support": 9
+        },
+        "format-injection": {
+          "precision": 0.361,
+          "recall": 1.0,
+          "f1": 0.531,
+          "support": 13
+        },
+        "memory-corruption": {
+          "precision": 0.802,
+          "recall": 0.898,
+          "f1": 0.847,
+          "support": 108
+        },
+        "memory-exposure": {
+          "precision": 0.533,
+          "recall": 0.242,
+          "f1": 0.333,
+          "support": 33
+        },
+        "privilege-escalation": {
+          "precision": 0.6,
+          "recall": 0.25,
+          "f1": 0.353,
+          "support": 12
+        },
+        "thread-safety": {
+          "precision": 0.5,
+          "recall": 0.5,
+          "f1": 0.5,
+          "support": 4
+        }
+      },
+      "thresholds": {
+        "code-execution": 0.25,
+        "crypto-failure": 0.25,
+        "denial-of-service": 0.45,
+        "file-disclosure": 0.2,
+        "format-injection": 0.05,
+        "memory-corruption": 0.4,
+        "memory-exposure": 0.45,
+        "privilege-escalation": 0.1,
+        "thread-safety": 0.3
+      }
+    },
+    "logreg_keywords_tuned": {
+      "micro_f1": 0.733,
+      "macro_f1": 0.61,
+      "exact_match": 0.577,
+      "any_correct": 0.758,
+      "per_label": {
+        "code-execution": {
+          "precision": 0.556,
+          "recall": 0.5,
+          "f1": 0.526,
+          "support": 20
+        },
+        "crypto-failure": {
+          "precision": 0.455,
+          "recall": 1.0,
+          "f1": 0.625,
+          "support": 45
+        },
+        "denial-of-service": {
+          "precision": 0.866,
+          "recall": 0.866,
+          "f1": 0.866,
+          "support": 67
+        },
+        "file-disclosure": {
+          "precision": 0.556,
+          "recall": 0.556,
+          "f1": 0.556,
+          "support": 9
+        },
+        "format-injection": {
+          "precision": 0.52,
+          "recall": 1.0,
+          "f1": 0.684,
+          "support": 13
+        },
+        "memory-corruption": {
+          "precision": 0.861,
+          "recall": 0.917,
+          "f1": 0.888,
+          "support": 108
+        },
+        "memory-exposure": {
+          "precision": 0.514,
+          "recall": 0.545,
+          "f1": 0.529,
+          "support": 33
+        },
+        "privilege-escalation": {
+          "precision": 0.6,
+          "recall": 0.25,
+          "f1": 0.353,
+          "support": 12
+        },
+        "thread-safety": {
+          "precision": 0.333,
+          "recall": 0.75,
+          "f1": 0.462,
+          "support": 4
+        }
+      },
+      "thresholds": {
+        "code-execution": 0.45,
+        "crypto-failure": 0.35,
+        "denial-of-service": 0.7,
+        "file-disclosure": 0.1,
+        "format-injection": 0.6,
+        "memory-corruption": 0.4,
+        "memory-exposure": 0.45,
+        "privilege-escalation": 0.65,
+        "thread-safety": 0.6
+      }
+    }
+  },
+  "severity": {
+    "train": 282,
+    "test": 87,
+    "test_distribution": {
+      "high": 48,
+      "medium": 27,
+      "critical": 3,
+      "low": 9
+    },
+    "model": {
+      "accuracy": 0.563,
+      "macro_f1": 0.397,
+      "within_one_band": 0.931
+    },
+    "majority_baseline": {
+      "predicts": "high",
+      "accuracy": 0.552,
+      "macro_f1": 0.178,
+      "within_one_band": 0.897
+    },
+    "confusion": {
+      "low": {
+        "high": 3,
+        "medium": 1,
+        "low": 5
+      },
+      "medium": {
+        "medium": 10,
+        "high": 11,
+        "critical": 1,
+        "low": 5
+      },
+      "high": {
+        "high": 34,
+        "medium": 12,
+        "critical": 1,
+        "low": 1
+      },
+      "critical": {
+        "high": 2,
+        "medium": 1
+      }
+    }
+  },
+  "dedup": {
+    "index_size": 1232,
+    "queries": 384,
+    "independent_queries": 261,
+    "median_token_jaccard_query_vs_advisory": 0.2,
+    "duplicate_judge": {
+      "features": [
+        "top similarity",
+        "margin over runner-up",
+        "report names the crate",
+        "top x named"
+      ],
+      "new_bug_top_match_is_same_crate": 0.305,
+      "judge": {
+        "roc_auc": 0.912,
+        "at_95pct_precision": {
+          "threshold": 0.991,
+          "duplicate_recall": 0.07
+        },
+        "at_90pct_precision": {
+          "threshold": 0.649,
+          "duplicate_recall": 0.716
+        },
+        "at_80pct_precision": {
+          "threshold": 0.49,
+          "duplicate_recall": 0.885
+        },
+        "best_f1": {
+          "f1": 0.853,
+          "threshold": 0.523,
+          "precision": 0.844,
+          "duplicate_recall": 0.862
+        }
+      },
+      "top_score_only": {
+        "roc_auc": 0.878,
+        "at_95pct_precision": {
+          "threshold": 0.815,
+          "duplicate_recall": 0.172
+        },
+        "at_90pct_precision": {
+          "threshold": 0.625,
+          "duplicate_recall": 0.26
+        },
+        "at_80pct_precision": {
+          "threshold": 0.264,
+          "duplicate_recall": 0.81
+        },
+        "best_f1": {
+          "f1": 0.821,
+          "threshold": 0.204,
+          "precision": 0.735,
+          "duplicate_recall": 0.93
+        }
+      }
+    },
+    "raw": {
+      "tfidf_word_char": {
+        "all": {
+          "recall@1": 0.883,
+          "recall@5": 0.969,
+          "recall@10": 0.979,
+          "mrr": 0.921,
+          "queries": 384
+        },
+        "independent_only": {
+          "recall@1": 0.828,
+          "recall@5": 0.954,
+          "recall@10": 0.969,
+          "mrr": 0.884,
+          "queries": 261
+        },
+        "novelty": {
+          "roc_auc": 0.878,
+          "threshold_at_95pct_precision": 0.815,
+          "duplicate_recall_at_that_threshold": 0.172
+        }
+      },
+      "minilm_embedding": {
+        "all": {
+          "recall@1": 0.737,
+          "recall@5": 0.893,
+          "recall@10": 0.924,
+          "mrr": 0.81,
+          "queries": 384
+        },
+        "independent_only": {
+          "recall@1": 0.636,
+          "recall@5": 0.843,
+          "recall@10": 0.889,
+          "mrr": 0.733,
+          "queries": 261
+        },
+        "novelty": {
+          "roc_auc": 0.79,
+          "threshold_at_95pct_precision": 0.886,
+          "duplicate_recall_at_that_threshold": 0.172
+        }
+      },
+      "hybrid": {
+        "all": {
+          "recall@1": 0.891,
+          "recall@5": 0.964,
+          "recall@10": 0.979,
+          "mrr": 0.927,
+          "queries": 384
+        },
+        "independent_only": {
+          "recall@1": 0.843,
+          "recall@5": 0.946,
+          "recall@10": 0.969,
+          "mrr": 0.894,
+          "queries": 261
+        },
+        "novelty": {
+          "roc_auc": 0.868,
+          "threshold_at_95pct_precision": 0.796,
+          "duplicate_recall_at_that_threshold": 0.219
+        }
+      }
+    },
+    "crate_name_masked": {
+      "tfidf_word_char": {
+        "all": {
+          "recall@1": 0.852,
+          "recall@5": 0.943,
+          "recall@10": 0.964,
+          "mrr": 0.897,
+          "queries": 384
+        },
+        "independent_only": {
+          "recall@1": 0.785,
+          "recall@5": 0.916,
+          "recall@10": 0.946,
+          "mrr": 0.85,
+          "queries": 261
+        },
+        "novelty": {
+          "roc_auc": 0.862,
+          "threshold_at_95pct_precision": 0.777,
+          "duplicate_recall_at_that_threshold": 0.198
+        }
+      },
+      "minilm_embedding": {
+        "all": {
+          "recall@1": 0.612,
+          "recall@5": 0.786,
+          "recall@10": 0.818,
+          "mrr": 0.696,
+          "queries": 384
+        },
+        "independent_only": {
+          "recall@1": 0.487,
+          "recall@5": 0.693,
+          "recall@10": 0.732,
+          "mrr": 0.588,
+          "queries": 261
+        },
+        "novelty": {
+          "roc_auc": 0.728,
+          "threshold_at_95pct_precision": 0.882,
+          "duplicate_recall_at_that_threshold": 0.151
+        }
+      },
+      "hybrid": {
+        "all": {
+          "recall@1": 0.836,
+          "recall@5": 0.924,
+          "recall@10": 0.948,
+          "mrr": 0.879,
+          "queries": 384
+        },
+        "independent_only": {
+          "recall@1": 0.766,
+          "recall@5": 0.889,
+          "recall@10": 0.923,
+          "mrr": 0.826,
+          "queries": 261
+        },
+        "novelty": {
+          "roc_auc": 0.845,
+          "threshold_at_95pct_precision": 0.803,
+          "duplicate_recall_at_that_threshold": 0.188
+        }
+      }
+    }
+  }
+}
