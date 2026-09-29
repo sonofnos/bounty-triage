@@ -97,7 +97,7 @@ class CategoryClassifier:
             OneVsRestClassifier(LogisticRegression(max_iter=3000, C=8.0, class_weight="balanced")),
         )
 
-    def fit(self, texts: list[str], labels: list[list[str]]) -> "CategoryClassifier":
+    def fit(self, texts: list[str], labels: list[list[str]]) -> CategoryClassifier:
         y = self.binarizer.fit_transform(labels)
         self.model.fit(texts, y)
         return self
@@ -123,7 +123,7 @@ class SeverityModel:
             LogisticRegression(max_iter=3000, C=4.0, class_weight="balanced"),
         )
 
-    def fit(self, texts: list[str], bands: list[str]) -> "SeverityModel":
+    def fit(self, texts: list[str], bands: list[str]) -> SeverityModel:
         self.model.fit(texts, bands)
         return self
 
@@ -152,7 +152,7 @@ class Deduplicator:
         self.char = TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), sublinear_tf=True)
         self.ids: list[str] = []
 
-    def fit(self, ids: list[str], texts: list[str]) -> "Deduplicator":
+    def fit(self, ids: list[str], texts: list[str]) -> Deduplicator:
         self.ids = list(ids)
         self._w = self.word.fit_transform(texts)
         self._c = self.char.fit_transform(texts)
@@ -178,7 +178,7 @@ class EmbeddingDeduplicator:
         self.encoder = SentenceTransformer(model_name)
         self.ids: list[str] = []
 
-    def fit(self, ids: list[str], texts: list[str]) -> "EmbeddingDeduplicator":
+    def fit(self, ids: list[str], texts: list[str]) -> EmbeddingDeduplicator:
         self.ids = list(ids)
         self._e = self._encode(texts)
         return self
