@@ -17,7 +17,9 @@ from collections import Counter
 from pathlib import Path
 
 import numpy as np
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import f1_score, precision_recall_fscore_support, roc_auc_score
+from sklearn.model_selection import GroupKFold, cross_val_predict
 from sklearn.preprocessing import MultiLabelBinarizer
 
 from .cvss import SEVERITIES
@@ -25,6 +27,7 @@ from .models import (
     CATEGORIES,
     CategoryClassifier,
     Deduplicator,
+    DuplicateJudge,
     KeywordClassifier,
     SeverityModel,
     combine,
@@ -63,14 +66,23 @@ def eval_categories(advisories: list[dict]) -> dict:
     texts = [text_of(a) for a in test]
     truth = [a["categories"] for a in test]
 
-    model = CategoryClassifier().fit([text_of(a) for a in train], [a["categories"] for a in train])
-    return {
+    train_texts, train_labels = [text_of(a) for a in train], [a["categories"] for a in train]
+    variants = {
+        "logreg_threshold_0.5": CategoryClassifier(),
+        "logreg_tuned_thresholds": CategoryClassifier(tune_thresholds=True),
+        "logreg_keywords_tuned": CategoryClassifier(tune_thresholds=True, keywords=True),
+    }
+    out = {
         "train": len(train),
         "test": len(test),
         "label_counts_test": dict(Counter(c for t in truth for c in t)),
-        "model": _multilabel_scores(truth, model.predict(texts)),
         "keyword_baseline": _multilabel_scores(truth, KeywordClassifier().predict(texts)),
     }
+    for name, model in variants.items():
+        model.fit(train_texts, train_labels)
+        out[name] = _multilabel_scores(truth, model.predict(texts))
+        out[name]["thresholds"] = dict(zip(CATEGORIES, map(float, model.thresholds)))
+    return out
 
 
 def eval_severity(advisories: list[dict]) -> dict:
@@ -139,6 +151,39 @@ def _novelty(sims: np.ndarray, truth_idx: list[int]) -> dict:
     }
 
 
+def _precision_threshold(y: np.ndarray, s: np.ndarray, target: float = 0.95) -> tuple[float | None, float | None]:
+    order = np.argsort(-s)
+    tp = np.cumsum(y[order])
+    precision = tp / np.arange(1, len(s) + 1)
+    ok = np.where(precision >= target)[0]
+    if not len(ok):
+        return None, None
+    best = ok.max()
+    return float(s[order][best]), float(tp[best] / y.sum())
+
+
+def eval_judge(sims: np.ndarray, reports: list[dict], truth: list[int], advisories: list[dict]) -> dict:
+    """Out-of-fold duplicate/new calls, folds grouped by query so a query's positive and
+    negative example never sit on both sides of a split."""
+    packages = [a["package"] for a in advisories]
+    X, y, groups = DuplicateJudge.training_pairs(sims, [r["text"] for r in reports], truth, packages)
+    oof = cross_val_predict(LogisticRegression(max_iter=1000), X, y, groups=groups,
+                            cv=GroupKFold(n_splits=5), method="predict_proba")[:, 1]
+    threshold, recall = _precision_threshold(y, oof)
+    top_only_threshold, top_only_recall = _precision_threshold(y, X[:, 0])
+    return {
+        "features": ["top similarity", "margin over runner-up", "report names the crate", "top x named"],
+        "roc_auc": round(float(roc_auc_score(y, oof)), 3),
+        "probability_threshold_at_95pct_precision": None if threshold is None else round(threshold, 3),
+        "duplicate_recall_at_95pct_precision": None if recall is None else round(recall, 3),
+        "top_score_only": {
+            "roc_auc": round(float(roc_auc_score(y, X[:, 0])), 3),
+            "duplicate_recall_at_95pct_precision": None if top_only_recall is None else round(top_only_recall, 3),
+            "threshold": None if top_only_threshold is None else round(top_only_threshold, 3),
+        },
+    }
+
+
 def eval_dedup(advisories: list[dict], reports: list[dict], embeddings: bool) -> dict:
     by_id = {a["id"]: i for i, a in enumerate(advisories)}
     reports = [r for r in reports if r["rustsec_id"] in by_id]
@@ -173,6 +218,8 @@ def eval_dedup(advisories: list[dict], reports: list[dict], embeddings: bool) ->
             sims["minilm_embedding"] = emb.similarity(queries)
             sims["hybrid"] = combine(sims["tfidf_word_char"], sims["minilm_embedding"])
 
+        if variant == "raw":
+            out["duplicate_judge"] = eval_judge(sims["tfidf_word_char"], reports, truth, advisories)
         out[variant] = {}
         for name, s in sims.items():
             out[variant][name] = {
@@ -199,13 +246,23 @@ def to_markdown(m: dict) -> str:
         "| | micro-F1 | macro-F1 | exact match | at least one label right |",
         "|---|---|---|---|---|",
     ]
-    for name, key in (("TF-IDF + logistic regression", "model"), ("keyword baseline", "keyword_baseline")):
+    names = (
+        ("keyword baseline", "keyword_baseline"),
+        ("TF-IDF + logistic regression, threshold 0.5", "logreg_threshold_0.5"),
+        ("… with per-class thresholds tuned by CV on train", "logreg_tuned_thresholds"),
+        ("… plus keyword features (default)", "logreg_keywords_tuned"),
+    )
+    for name, key in names:
         r = c[key]
         lines.append(f"| {name} | {r['micro_f1']} | {r['macro_f1']} | {r['exact_match']} | {r['any_correct']} |")
-    lines += ["", "| class | support | precision | recall | F1 | baseline F1 |", "|---|---|---|---|---|---|"]
+    best = c["logreg_keywords_tuned"]
+    lines += ["", "Per class, default model vs keyword baseline:", "",
+              "| class | test support | tuned threshold | precision | recall | F1 | baseline F1 |",
+              "|---|---|---|---|---|---|---|"]
     for cat in CATEGORIES:
-        r, b = c["model"]["per_label"][cat], c["keyword_baseline"]["per_label"][cat]
-        lines.append(f"| {cat} | {r['support']} | {r['precision']} | {r['recall']} | {r['f1']} | {b['f1']} |")
+        r, b = best["per_label"][cat], c["keyword_baseline"]["per_label"][cat]
+        lines.append(f"| {cat} | {r['support']} | {best['thresholds'][cat]} | {r['precision']} | "
+                     f"{r['recall']} | {r['f1']} | {b['f1']} |")
 
     lines += [
         "",
@@ -236,6 +293,21 @@ def to_markdown(m: dict) -> str:
                 f"| {variant} | {name} | {a['recall@1']} | {a['recall@5']} | {a['mrr']} | "
                 f"{i['recall@1']} | {n['roc_auc']} | {n['duplicate_recall_at_that_threshold']} |"
             )
+    j = d["duplicate_judge"]
+    lines += [
+        "",
+        "### Duplicate or new?",
+        "",
+        "Every query is scored twice: once with its advisory in the index (a duplicate) and once with it "
+        "removed (a new bug). Five-fold cross-validation, grouped by query.",
+        "",
+        "| decision rule | ROC-AUC | duplicates caught at 95% precision |",
+        "|---|---|---|",
+        f"| top similarity alone | {j['top_score_only']['roc_auc']} | "
+        f"{j['top_score_only']['duplicate_recall_at_95pct_precision']} |",
+        f"| logistic regression on top score, margin, crate named | {j['roc_auc']} | "
+        f"{j['duplicate_recall_at_95pct_precision']} |",
+    ]
     return "\n".join(lines) + "\n"
 
 

@@ -72,3 +72,25 @@ def test_triage_note_flags_duplicates_and_new_reports():
     assert "memory-corruption" in note
     note = triage("Governance proposal enactment ignores the configured delay", CORPUS, threshold=0.3)
     assert "No close match" in note
+
+
+def test_duplicate_judge_learns_from_margin_and_crate_name():
+    from bounty_triage.__main__ import fit_models
+
+    unique = CORPUS[:6]
+    reports = [
+        {"id": "CVE-1", "rustsec_id": "RUSTSEC-2022-0001", "text": "smallvec insert_many heap overflow"},
+        {"id": "CVE-2", "rustsec_id": "RUSTSEC-2022-0002", "text": "hyper accepts unbounded headers, DoS"},
+        {"id": "CVE-3", "rustsec_id": "RUSTSEC-2022-0003", "text": "ring signature check leaks timing"},
+        {"id": "CVE-4", "rustsec_id": "RUSTSEC-2022-0004", "text": "tar unpack path traversal via ../"},
+        {"id": "CVE-5", "rustsec_id": "RUSTSEC-2022-0005", "text": "arrayvec drain use after free"},
+        {"id": "CVE-6", "rustsec_id": "RUSTSEC-2022-0006", "text": "tokio queue data race, unsound Sync"},
+    ]
+    models = fit_models(unique, reports)
+    assert models.judge is not None
+    packages = [a["package"] for a in unique]
+    dup = "tar crate: extracting an archive writes outside the target directory through ../ paths"
+    new = "Governance proposal enactment ignores the configured delay"
+    p_dup = models.judge.probability(models.dedup.similarity([dup])[0], dup, packages)
+    p_new = models.judge.probability(models.dedup.similarity([new])[0], new, packages)
+    assert p_dup > p_new
